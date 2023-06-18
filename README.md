@@ -1,5 +1,7 @@
 ## clerk-sdk-node import error
 
+See https://github.com/clerkinc/javascript/issues/1375
+
 Starting with `@clerk/clerk-sdk-node@4.10.7`, named exports are not working when running our app using [`tsx`](https://github.com/esbuild-kit/tsx/).
 
 This repo is a minimal reproduction. It has two directories: working and broken. The only difference between the two is the version of `@clerk/clerk-sdk-node` in `package.json`:
