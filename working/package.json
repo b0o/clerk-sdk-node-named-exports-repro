@@ -1,0 +1,11 @@
+{
+  "name": "clerk-sessions-import-error-repro-working",
+  "type":"module",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@clerk/clerk-sdk-node": "4.10.6",
+    "tsx": "^3.12.7"
+  }
+}
