@@ -20,7 +20,7 @@ import clerk from '@clerk/clerk-sdk-node'
 clerk.verifyToken(process.env.TOKEN).then(console.log)
 ```
 
-To run the examples, you'll need to set the `CLERK_API_KEY` and `TOKEN` environment variables. The `CLERK_API_KEY` is used to initialize the Clerk client, and the `TOKEN` is used to verify a token. I am generating the token elsewhere using `SignedInAuthObject.getToken()`.
+To run the examples, you'll need to set the `CLERK_API_KEY` and `TOKEN` environment variables. The `CLERK_API_KEY` is used to initialize the Clerk client, and the `TOKEN` is used to verify a token. I am generating the token elsewhere using `SignedInAuthObject.getToken()`. Really, the value of these variables isn't super important, because the issue occurs at import time, not runtime.
 
 ### 4.10.5 working example
 
