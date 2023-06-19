@@ -11,7 +11,7 @@ This repo is a minimal reproduction. It has three directories:
 - `4.10.6-broken` is a broken example
 - `4.10.7-broken` is a broken example
 
-The only difference between the three is the version of `@clerk/clerk-sdk-node` in `package.json`.
+The only difference between the three is the version of `@clerk/clerk-sdk-node` in `package.json`. All are configured with `"type": "module"` in `package.json`.
 
 The code in `index.js` is identical in all three directories:
 
