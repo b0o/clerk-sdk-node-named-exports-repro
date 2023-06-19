@@ -1,65 +1,115 @@
 ## clerk-sdk-node import error
 
-Starting with `@clerk/clerk-sdk-node@4.10.7`, named exports are not working when running our app using [`tsx`](https://github.com/esbuild-kit/tsx/).
+In `@clerk/clerk-sdk-node@4.10.6` and `@clerk/clerk-sdk-node@4.10.7`, there are issues
+using esm imports. The behavior is different between the two versions, but both are
+broken. The issue is not present in `@clerk/clerk-sdk-node@4.10.5`, which works as
+expected.
 
-This repo is a minimal reproduction. It has two directories: working and broken. The only difference between the two is the version of `@clerk/clerk-sdk-node` in `package.json`:
+This repo is a minimal reproduction. It has three directories: 
 
-- `working/package.json` has `@clerk/clerk-sdk-node@4.10.6`
-- `broken/package.json` has `@clerk/clerk-sdk-node@4.10.7`
+- `4.10.5-working` is a working example
+- `4.10.6-broken` is a broken example
+- `4.10.7-broken` is a broken example
 
-### Working example
+The only difference between the three is the version of `@clerk/clerk-sdk-node` in `package.json`.
+
+The code in `index.js` is identical in all three directories:
+
+```javascript
+import clerk from '@clerk/clerk-sdk-node'
+clerk.verifyToken(process.env.TOKEN).then(console.log)
+```
+
+To run the examples, you'll need to set the `CLERK_API_KEY` and `TOKEN` environment variables. The `CLERK_API_KEY` is used to initialize the Clerk client, and the `TOKEN` is used to verify a token. I am generating the token elsewhere using `SignedInAuthObject.getToken()`.
+
+### 4.10.5 working example
 
 ```
-$ cd working
+$ cd 4.10.5-working
 $ npm i
-$ cat index.ts
-
-import { sessions } from '@clerk/clerk-sdk-node'
-console.log(sessions)
-
-$ npm run start
-
-> start
-> tsx index.ts
-
-xe { request: [AsyncFunction (anonymous)] }
+$ CLERK_API_KEY=xxx TOKEN=xxx node index.js
+{
+  exp: xxx,
+  iat: xxx,
+  iss: 'xxx',
+  jti: 'xxx',
+  nbf: xxx,
+  session: { ... snip ... },
+  sub: 'xxx',
+  user: {
+    // ... snip ...
+  }
+}
 ```
 
-### Broken example
+### 4.10.6 broken example
 
 ```
-$ cd broken
+$ cd 4.10.6-broken
 $ npm i
-$ cat index.ts
+$ CLERK_API_KEY=xxx TOKEN=xxx node index.js
+file:///path/to/clerk-sdk-node-named-exports-repro/4.10.6-broken/index.js:2
+clerk.verifyToken(process.env.TOKEN).then(console.log)
+      ^
 
-import { sessions } from '@clerk/clerk-sdk-node'
-console.log(sessions)
+TypeError: clerk.verifyToken is not a function
+    at file:///path/to/clerk-sdk-node-named-exports-repro/4.10.6-broken/index.js:2:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:192:25)
+    at async DefaultModuleLoader.import (node:internal/modules/esm/loader:246:24)
+    at async loadESM (node:internal/process/esm_loader:40:7)
+    at async handleMainPromise (node:internal/modules/run_main:66:12)
 
-$ npm run start
-
-> start
-> tsx index.ts
-
-SyntaxError: The requested module '@clerk/clerk-sdk-node' does not provide an export named 'sessions'
-    at ModuleJob._instantiate (node:internal/modules/esm/module_job:128:21)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-    at async ModuleJob.run (node:internal/modules/esm/module_job:194:5)
-    at async Promise.all (index 0)
-    at async ESMLoader.import (node:internal/modules/esm/loader:385:24)
-    at async loadESM (node:internal/process/esm_loader:88:5)
-    at async handleMainPromise (node:internal/modules/run_main:61:12)
+Node.js v20.3.0
 ```
 
-### Workaround
+### 4.10.6 broken example (with named imports)
+```
+$ cd 4.10.6-broken
+$ npm i
+$ CLERK_API_KEY=xxx TOKEN=xxx node withNamedImport.js
+/path/to/clerk-sdk-node-named-exports-repro/4.10.6-broken/node_modules/@clerk/backend/dist/index.js:65
+`}async function wt(t){t.frontendApi=L(t.publishableKey)?.frontendApi||t.frontendApi||"";let e=Ue(t),r=await le(()=>v.fetch(Ue(t)));if(!r.ok)throw new m({action:"Contact support@clerk.com",message:`Error loading Clerk Interstitial from ${e} with code=${r.status}`,reason:"interstitial-remote-failed-to-load"});return r.text()}function Ue(t){t.frontendApi=L(t.publishableKey)?.frontendApi||t.frontendApi||"";let{apiUrl:e,frontendApi:r,pkgVersion:n,clerkJSVersion:i,publishableKey:s,proxyUrl:a,isSatellite:u,domain:o,signInUrl:c}=t,d=new URL(e);return d.pathname=l(d.pathname,J,"/public/interstitial"),d.searchParams.append("clerk_js_version",i||xt(r,n)),s?d.searchParams.append("publishable_key",s):d.searchParams.append("frontend_api",r),a&&d.searchParams.append("proxy_url",a),u&&d.searchParams.append("is_satellite","true"),d.searchParams.append("sign_in_url",c||""),Ze(t.frontendApi)||d.searchParams.append("use_domain_for_script","true"),o&&d.searchParams.append("domain",o),d.href}var xt=(t,e)=>!e&&It(t)?"staging":e?e.includes("next")?"next":e.split(".")[0]||"latest":"latest",Nr=(t,{pkgVersion:e,clerkJSVersion:r})=>{let n=t.replace(/http(s)?:\/\//,""),i=xt(t,e);return`https://${n}/npm/@clerk/clerk-js@${r||i}/dist/clerk.browser.js`};var et=(i=>(i.SignedIn="signed-in",i.SignedOut="signed-out",i.Interstitial="interstitial",i.Unknown="unknown",i))(et||{});async function tt(t,e){let{apiKey:r,secretKey:n,apiUrl:i,apiVersion:s,cookieToken:a,frontendApi:u,proxyUrl:o,publishableKey:c,domain:d,isSatellite:f,headerToken:h,loadSession:k,loadUser:P,loadOrganization:O,signInUrl:T}=t,{sid:A,org_id:b,sub:I}=e,{sessions:_,users:S,organizations:y}=se({apiKey:r,secretKey:n,apiUrl:i,apiVersion:s}),[p,re,ce]=await Promise.all([k?_.getSession(A):Promise.resolve(void 0),P?S.getUser(I):Promise.resolve(void 0),O&&b?y.getOrganization({organizationId:b}):Promise.resolve(void 0)]),tr=Xe(e,{secretKey:n,apiKey:r,apiUrl:i,apiVersion:s,token:a||h||"",session:p,user:re,organization:ce},{...t,status:"signed-in"});return{status:"signed-in",reason:null,message:null,frontendApi:u,proxyUrl:o,publishableKey:c,domain:d,isSatellite:f,signInUrl:T,isSignedIn:!0,isInterstitial:!1,isUnknown:!1,toAuth:()=>tr}}function K(t,e,r=""){let{frontendApi:n,publishableKey:i,proxyUrl:s,isSatellite:a,domain:u,signInUrl:o}=t;return{status:"signed-out",reason:e,message:r,frontendApi:n,proxyUrl:s,publishableKey:i,isSatellite:a,domain:u,signInUrl:o,isSignedIn:!1,isInterstitial:!1,isUnknown:!1,toAuth:()=>Qe({...t,status:"signed-out",reason:e,message:r})}}function U(t,e,r=""){let{frontendApi:n,publishableKey:i,proxyUrl:s,isSatellite:a,domain:u,signInUrl:o}=t;return{status:"interstitial",reason:e,message:r,frontendApi:n,publishableKey:i,isSatellite:a,domain:u,proxyUrl:s,signInUrl:o,isSignedIn:!1,isInterstitial:!0,isUnknown:!1,toAuth:()=>null}}function Tt(t,e,r=""){let{frontendApi:n,publishableKey:i,isSatellite:s,domain:a,signInUrl:u}=t;return{status:"unknown",reason:e,message:r,frontendApi:n,publishableKey:i,isSatellite:s,domain:a,signInUrl:u,isSignedIn:!1,isInterstitial:!1,isUnknown:!0,toAuth:()=>null}}function rt({originURL:t,host:e,forwardedHost:r,forwardedPort:n,forwardedProto:i}){let s=Jt(i),a=Jt(n),u=(i||"").split(",").length>(n||"").split(",").length;s&&u&&(a=vt(s));let o=Mr(t.protocol);if(s&&s!==o)return!0;let d=Cr(r||e,s||o);return d.port=a||d.port,Rt(d)!==Rt(t)||d.hostname!==t.hostname}function Cr(t,e="https"){return new URL(`${e}://${t}`)}var Er={http:"80",https:"443"};function Rt(t){return t.port||vt(t.protocol)}function vt(t){return Er[t]}function Jt(t){return t?.split(",")[0]?.trim()||""}function Mr(t){return t?.replace(/:$/,"")||""}var Ee={parse(t,e){return qr(t,Ut,e)},stringify(t,e){return zr(t,Ut,e)}},Ut={chars:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",bits:6};function qr(t,e,r={}){if(!e.codes){e.codes={};for(let o=0;o<e.chars.length;++o)e.codes[e.chars[o]]=o}if(!r.loose&&t.length*e.bits&7)throw new SyntaxError("Invalid padding");let n=t.length;for(;t[n-1]==="=";)if(--n,!r.loose&&!((t.length-n)*e.bits&7))throw new SyntaxError("Invalid padding");let i=new(r.out??Uint8Array)(n*e.bits/8|0),s=0,a=0,u=0;for(let o=0;o<n;++o){let c=e.codes[t[o]];if(c===void 0)throw new SyntaxError("Invalid character "+t[o]);a=a<<e.bits|c,s+=e.bits,s>=8&&(s-=8,i[u++]=255&a>>s)}if(s>=e.bits||255&a<<8-s)throw new SyntaxError("Unexpected end of data");return i}function zr(t,e,r={}){let{pad:n=!0}=r,i=(1<<e.bits)-1,s="",a=0,u=0;for(let o=0;o<t.length;++o)for(u=u<<8|255&t[o],a+=8;a>e.bits;)a-=e.bits,s+=e.chars[i&u>>a];if(a&&(s+=e.chars[i&u<<e.bits-a]),n)for(;s.length*e.bits&7;)s+="=";return s}var Kr=t=>Array.isArray(t)&&t.length>0&&t.every(e=>typeof e=="string"),Nt=(t,e)=>{let r=[e].flat().filter(s=>!!s),n=[t].flat().filter(s=>!!s);if(r.length>0&&n.length>0){if(typeof t=="string"){if(!r.includes(t))throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Invalid JWT audience claim (aud) ${JSON.stringify(t)}. Is not included in "${JSON.stringify(r)}".`})}else if(Kr(t)&&!t.some(s=>r.includes(s)))throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Invalid JWT audience claim array (aud) ${JSON.stringify(t)}. Is not included in "${JSON.stringify(r)}".`})}};var Wr=2*1e3,st={RS256:"SHA-256",RS384:"SHA-384",RS512:"SHA-512",ES256:"SHA-256",ES384:"SHA-384",ES512:"SHA-512"},nt="RSASSA-PKCS1-v1_5",it="ECDSA",Lr={RS256:nt,RS384:nt,RS512:nt,ES256:it,ES384:it,ES512:it},jr=Object.keys(st);async function at(t,e){let{header:r,signature:n,raw:i}=t,a=new TextEncoder().encode([i.header,i.payload].join(".")),u=await v.crypto.subtle.importKey("jwk",e,{name:Lr[r.alg],hash:st[r.alg]},!1,["verify"]);return v.crypto.subtle.verify("RSASSA-PKCS1-v1_5",u,n,a)}function de(t){let e=(t||"").toString().split(".");if(e.length!==3)throw new m({reason:"token-invalid",message:"Invalid JWT form. A JWT consists of three parts separated by dots."});let[r,n,i]=e,s=new TextDecoder,a=JSON.parse(s.decode(Ee.parse(r,{loose:!0}))),u=JSON.parse(s.decode(Ee.parse(n,{loose:!0}))),o=Ee.parse(i,{loose:!0});return{header:a,payload:u,signature:o,raw:{header:r,payload:n,signature:i,text:t}}}async function Me(t,{audience:e,authorizedParties:r,clockSkewInSeconds:n=Wr,issuer:i,key:s}){let a=de(t),{header:u,payload:o}=a,{typ:c,alg:d}=u;if(typeof c<"u"&&c!=="JWT")throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-invalid",message:`Invalid JWT type ${JSON.stringify(c)}. Expected "JWT".`});if(!st[d])throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-invalid-algorithm",message:`Invalid JWT algorithm ${JSON.stringify(d)}. Supported: ${jr}.`});let{azp:f,sub:h,aud:k,iss:P,iat:O,exp:T,nbf:A}=o;if(typeof h!="string")throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Subject claim (sub) is required and must be a string. Received ${JSON.stringify(h)}.`});if(Nt([k],[e]),f&&r&&r.length>0&&!r.includes(f))throw new m({reason:"token-invalid-authorized-parties",message:`Invalid JWT Authorized party claim (azp) ${JSON.stringify(f)}. Expected "${r}".`});if(typeof i=="function"&&!i(P))throw new m({reason:"token-invalid-issuer",message:"Failed JWT issuer resolver. Make sure that the resolver returns a truthy value."});if(typeof i=="string"&&P&&P!==i)throw new m({reason:"token-invalid-issuer",message:`Invalid JWT issuer claim (iss) ${JSON.stringify(a.payload.iss)}. Expected "${i}".`});if(typeof T!="number")throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Invalid JWT expiry date claim (exp) ${JSON.stringify(T)}. Expected number.`});let b=new Date(Date.now()),I=new Date(0);if(I.setUTCSeconds(T),I.getTime()<=b.getTime()-n)throw new m({reason:"token-expired",message:`JWT is expired. Expiry date: ${I}, Current date: ${b}.`});if(A!==void 0){if(typeof A!="number")throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Invalid JWT not before date claim (nbf) ${JSON.stringify(A)}. Expected number.`});let y=new Date(0);if(y.setUTCSeconds(A),y.getTime()>b.getTime()+n)throw new m({reason:"token-not-active-yet",message:`JWT cannot be used prior to not before date claim (nbf). Not before date: ${y}; Current date: ${b};`})}if(O!==void 0){if(typeof O!="number")throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Invalid JWT issued at date claim (iat) ${JSON.stringify(O)}. Expected number.`});let y=new Date(0);if(y.setUTCSeconds(O),y.getTime()>b.getTime()+n)throw new m({reason:"token-not-active-yet",message:`JWT issued at date claim (iat) is in the future. Issued at date: ${y}; Current date: ${b};`})}let S;try{S=await at(a,s)}catch(y){throw new m({action:"Make sure that this is a valid Clerk generate JWT.",reason:"token-verification-failed",message:`Error verifying JWT signature. ${y}`})}if(!S)throw new m({reason:"token-invalid-signature",message:"JWT signature is invalid."});return o}var qe={},Et=0;function ze(t){return qe[t]}function Mt(t,e=1e3*60*60){qe[t.kid]=t,Et=Date.now(),e>=0&&setTimeout(()=>{t?delete qe[t.kid]:qe={}},e)}var Ct="local",Fr="-----BEGIN PUBLIC KEY-----",Vr="-----END PUBLIC KEY-----",$r="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA",Br="IDAQAB";function qt(t){if(!ze(Ct)){if(!t)throw new m({action:"Set the CLERK_JWT_KEY environment variable.",message:"Missing local JWK.",reason:"jwk-local-missing"});let e=t.replace(/(\r\n|\n|\r)/gm,"").replace(Fr,"").replace(Vr,"").replace($r,"").replace(Br,"").replace(/\+/g,"-").replace(/\//g,"_");Mt({kid:"local",kty:"RSA",alg:"RS256",n:e,e:"AQAB"},-1)}return ze(Ct)}async function ot({apiKey:t,secretKey:e,apiUrl:r=W,apiVersion:n=J,issuer:i,kid:s,jwksCacheTtlInMs:a=1e3*60*60,skipJwksCache:u}){let o=!ze(s)&&Yr();if(u||o){let d,f=e||t;if(f)d=()=>Hr(r,f,n);else if(i)d=()=>Gr(i);else throw new m({action:"Contact support@clerk.com",message:"Failed to load JWKS from Clerk Backend or Frontend API.",reason:"jwk-remote-failed-to-load"});let{keys:h}=await le(d);if(!h||!h.length)throw new m({action:"Contact support@clerk.com",message:"The JWKS endpoint did not contain any signing keys. Contact support@clerk.com.",reason:"jwk-remote-failed-to-load"});h.forEach(k=>Mt(k,a))}let c=ze(s);if(!c)throw new m({action:"Contact support@clerk.com",message:`Unable to find a signing key in JWKS that matches kid='${s}'.`,reason:"jwk-remote-missing"});return c}async function Gr(t){let e=new URL(t);e.pathname=l(e.pathname,".well-known/jwks.json");let r=await v.fetch(e.href);if(!r.ok)throw new m({action:"Contact support@clerk.com",message:`Error loading Clerk JWKS from ${e.href} with code=${r.status}`,reason:"jwk-remote-failed-to-load"});return r.json()}async function Hr(t,e,r){if(!e)throw new m({action:"Set the CLERK_SECRET_KEY or CLERK_API_KEY environment variable.",message:"Missing Clerk Secret Key or API Key. Go to https://dashboard.clerk.com and get your key for your instance.",reason:"jwk-remote-failed-to-load"});let n=new URL(t);n.pathname=l(n.pathname,r,"/jwks");let i=await v.fetch(n.href,{headers:{Authorization:`Bearer ${e}`,"Content-Type":"application/json"}});if(!i.ok)throw new m({action:"Contact support@clerk.com",message:`Error loading Clerk JWKS from ${n.href} with code=${i.status}`,reason:"jwk-remote-failed-to-load"});return i.json()}function Yr(){return Date.now()-Et>=300*1e3}async function lt(t,e){let{apiKey:r,secretKey:n,apiUrl:i,apiVersion:s,audience:a,authorizedParties:u,clockSkewInSeconds:o,issuer:c,jwksCacheTtlInMs:d,jwtKey:f,skipJwksCache:h}=e,{header:k}=de(t),{kid:P}=k,O;if(f)O=qt(f);else if(typeof c=="string")O=await ot({issuer:c,kid:P,jwksCacheTtlInMs:d,skipJwksCache:h});else if(r||n)O=await ot({apiKey:r,secretKey:n,apiUrl:i,apiVersion:s,kid:P,jwksCacheTtlInMs:d,skipJwksCache:h});else throw new m({action:"Set the CLERK_JWT_KEY environment variable.",message:"Failed to resolve JWK during verification.",reason:"jwk-failed-to-resolve"});return await Me(t,{audience:a,authorizedParties:u,clockSkewInSeconds:o,key:O,issuer:c})}var Qr=t=>!!t?.get("__clerk_satellite_url"),Zr=t=>t?.get("__clerk_synced")==="true",en=t=>t?.get("__clerk_referrer_primary")==="true",tn=/^Mozilla\/|(Amazon CloudFront)/,zt=t=>{let{apiKey:e,secretKey:r,userAgent:n}=t;if(z(r||e)&&!tn.test(n||""))return K(t,"header-missing-non-browser")},Kt=t=>{let{origin:e,host:r,forwardedHost:n,forwardedPort:i,forwardedProto:s}=t;if(e&&rt({originURL:new URL(e),host:r,forwardedHost:n,forwardedPort:i,forwardedProto:s}))return K(t,"header-missing-cors")},Wt=t=>{let{apiKey:e,secretKey:r,isSatellite:n,searchParams:i}=t;if(z(r||e)&&!n&&Qr(i))return U(t,"primary-responds-to-syncing")},Lt=t=>{let{apiKey:e,secretKey:r,clientUat:n}=t;if(z(r||e)&&!n)return U(t,"uat-missing")},jt=t=>{let{apiKey:e,secretKey:r,referrer:n,host:i,forwardedHost:s,forwardedPort:a,forwardedProto:u}=t,o=n&&rt({originURL:new URL(n),host:i,forwardedHost:s,forwardedPort:a,forwardedProto:u});if(z(r||e)&&o)return U(t,"cross-origin-referrer")},Dt=t=>{let{apiKey:e,secretKey:r,isSatellite:n,searchParams:i}=t,s=r||e;if(n&&en(i)&&z(s))return U(t,"satellite-returns-from-primary")},Ft=t=>{let{apiKey:e,secretKey:r,clientUat:n,cookieToken:i}=t;if(Pt(r||e)&&!n&&!i)return K(t,"cookie-and-uat-missing")},Vt=t=>{let{clientUat:e}=t;if(e==="0")return K(t,"standard-signed-out")},$t=t=>{let{clientUat:e,cookieToken:r}=t;if(e&&Number.parseInt(e)>0&&!r)return U(t,"cookie-missing")},Bt=async t=>{let{headerToken:e}=t,r=await Ht(t,e);return await tt(t,r)},Gt=async t=>{let{cookieToken:e,clientUat:r}=t,n=await Ht(t,e),i=await tt(t,n),a=i.toAuth().sessionClaims.iat<Number.parseInt(r);return!r||a?U(t,"cookie-outdated"):i};async function ut(t,e){for(let r of e){let n=await r(t);if(n)return n}return K(t,"unexpected-error")}async function Ht(t,e){let{isSatellite:r,proxyUrl:n}=t,i;return r?i=null:n?i=n:i=s=>s.startsWith("https://clerk.")||s.includes(".clerk.accounts"),lt(e,{...t,issuer:i})}var Yt=t=>{let{clientUat:e,isSatellite:r,searchParams:n,secretKey:i,apiKey:s}=t,u=z(i||s);if(r&&(!e||e==="0")&&!Zr(n)&&!u)return U(t,"satellite-needs-syncing")};function rn(t,e){if(!t&&z(e))throw new Error("Missing signInUrl. Pass a signInUrl for dev instances if an app is satellite")}function nn(t){if(!t)throw new Error("Missing domain and proxyUrl. A satellite application needs to specify a domain or a proxyUrl")}async function Xt(t){t.frontendApi=L(t.publishableKey)?.frontendApi||t.frontendApi||"",t.apiUrl=t.apiUrl||W,t.apiVersion=t.apiVersion||J,ve(t.secretKey||t.apiKey),t.isSatellite&&(rn(t.signInUrl,t.secretKey||t.apiKey),nn(t.proxyUrl||t.domain));async function e(){try{return await ut(t,[Bt])}catch(i){return n(i,"header")}}async function r(){try{return await ut(t,[Kt,zt,Yt,Dt,Wt,Ft,Lt,jt,$t,Vt,Gt])}catch(i){return n(i,"cookie")}}function n(i,s){return i instanceof m?(i.tokenCarrier=s,["token-expired","token-not-active-yet"].includes(i.reason)?s==="header"?Tt(t,i.reason,i.getFullMessage()):U(t,i.reason,i.getFullMessage()):K(t,i.reason,i.getFullMessage())):K(t,"unexpected-error",i.message)}return t.headerToken?e():r()}var Ke=t=>{let{frontendApi:e,isSignedIn:r,proxyUrl:n,isInterstitial:i,reason:s,message:a,publishableKey:u,isSatellite:o,domain:c}=t;return{frontendApi:e,isSignedIn:r,proxyUrl:n,isInterstitial:i,reason:s,message:a,publishableKey:u,isSatellite:o,domain:c}};function dt(t){let{apiClient:e}=t,{apiKey:r="",secretKey:n="",jwtKey:i="",apiUrl:s=W,apiVersion:a=J,frontendApi:u="",proxyUrl:o="",publishableKey:c="",isSatellite:d=!1,domain:f="",audience:h=""}=t.options;return{authenticateRequest:({apiKey:b,secretKey:I,audience:_,frontendApi:S,proxyUrl:y,publishableKey:p,jwtKey:re,isSatellite:ce,domain:We,searchParams:Le,...ct})=>Xt({...ct,apiKey:b||r,secretKey:I||n,audience:_||h,apiUrl:s,apiVersion:a,frontendApi:S||u,proxyUrl:y||o,publishableKey:p||c,isSatellite:ce||d,domain:We||f,jwtKey:re||i,searchParams:Le}),localInterstitial:({frontendApi:b,publishableKey:I,proxyUrl:_,isSatellite:S,domain:y,...p})=>Ce({...p,frontendApi:b||u,proxyUrl:_||o,publishableKey:I||c,isSatellite:S||d,domain:y||f}),remotePublicInterstitial:({frontendApi:b,publishableKey:I,proxyUrl:_,isSatellite:S,domain:y,...p})=>wt({...p,apiUrl:s,frontendApi:b||u,publishableKey:I||c,proxyUrl:_||o,isSatellite:S||d,domain:y||f}),remotePrivateInterstitial:()=>e.interstitial.getInterstitial(),remotePublicInterstitialUrl:Ue,debugRequestState:Ke}}var Qt=(t,e)=>{let r;if(t.startsWith("http"))r=new URL(t);else{if(!e||!e.startsWith("http"))throw new Error("destination url or return back url should be an absolute path url!");let n=new URL(e);r=new URL(t,n.origin)}return e&&r.searchParams.set("redirect_url",e),r.toString()},Zt="Missing publishableKey. You can get your key at https://dashboard.clerk.com/last-active?path=api-keys.";function er({redirectAdapter:t,signUpUrl:e,signInUrl:r,frontendApi:n,publishableKey:i}){n||(n=L(i)?.frontendApi);let s=sn(n);return{redirectToSignUp:({returnBackUrl:o}={})=>{if(!e&&!s)throw new Error(Zt);let c=`${s}/sign-up`;return t(Qt(e||c,o))},redirectToSignIn:({returnBackUrl:o}={})=>{if(!r&&!s)throw new Error(Zt);let c=`${s}/sign-in`;return t(Qt(r||c,o))}}}function sn(t){return t?`https://${t.replace(/(clerk\.accounts\.|clerk\.)/,"accounts.")}`:""}function an(t){let e={...t},r=se(e),n=dt({options:e,apiClient:r});return{...r,...n,__unstable_options:e}}0&&(module.exports={AllowlistIdentifier,AuthStatus,Clerk,Client,DeletedObject,Email,EmailAddress,ExternalAccount,IdentificationLink,Invitation,OauthAccessToken,ObjectType,Organization,OrganizationInvitation,OrganizationMembership,OrganizationMembershipPublicUserData,PhoneNumber,RedirectUrl,SMSMessage,Session,SignInToken,Token,User,Verification,constants,createAuthenticateRequest,debugRequestState,decodeJwt,deserialize,hasValidSignature,loadInterstitialFromLocal,makeAuthObjectSerializable,prunePrivateMetadata,redirect,sanitizeAuthObject,signedInAuthObject,signedOutAuthObject,verifyJwt,verifyToken});
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
 
-Changing from a named export to a default export works around the issue:
+TypeError: Cannot destructure property 'apiKey' of 'e' as it is undefined.
+    at lt (/path/to/clerk-sdk-node-named-exports-repro/4.10.6-broken/node_modules/@clerk/backend/dist/index.js:65:11561)
+    at file:///path/to/clerk-sdk-node-named-exports-repro/4.10.6-broken/withNamedImport.js:2:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:192:25)
+    at async DefaultModuleLoader.import (node:internal/modules/esm/loader:246:24)
+    at async loadESM (node:internal/process/esm_loader:40:7)
+    at async handleMainPromise (node:internal/modules/run_main:66:12)
+
+Node.js v20.3.0
+```
+
+### 4.10.7 broken example
 
 ```
-import clerk from "@clerk/clerk-sdk-node";
-const { sessions } = clerk;
+$ cd 4.10.7-broken
+$ npm i
+$ CLERK_API_KEY=xxx TOKEN=xxx node index.js
+(node:2079785) Warning: To load an ES module, set "type": "module" in the package.json or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+/path/to/clerk-sdk-node-named-exports-repro/4.10.7-broken/node_modules/@clerk/clerk-sdk-node/dist/esm/index.js:1
+import "./chunk-NIMBE7W3.js";
+^^^^^^
+
+SyntaxError: Cannot use import statement outside a module
+    at internalCompileFunction (node:internal/vm:73:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1175:20)
+    at Module._compile (node:internal/modules/cjs/loader:1219:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1309:10)
+    at Module.load (node:internal/modules/cjs/loader:1113:32)
+    at Module._load (node:internal/modules/cjs/loader:960:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:165:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:192:25)
+    at async DefaultModuleLoader.import (node:internal/modules/esm/loader:246:24)
+    at async loadESM (node:internal/process/esm_loader:40:7)
+
+Node.js v20.3.0
 ```
 
 ### Environment
 
-- Node: Tested in both Node 16.15.0 and 20.3.0 with the same results.
+- Node: Node 20.3.0
 - OS: Arch Linux

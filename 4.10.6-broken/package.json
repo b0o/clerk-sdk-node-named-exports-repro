@@ -1,0 +1,7 @@
+{
+  "name": "clerk-sessions-import-error-repro-broken-4.10.6",
+  "type": "module",
+  "dependencies": {
+    "@clerk/clerk-sdk-node": "4.10.6"
+  }
+}
